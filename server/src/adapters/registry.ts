@@ -51,6 +51,14 @@ import {
 import {
   agentConfigurationDoc as piAgentConfigurationDoc,
 } from "@paperclipai/adapter-pi-local";
+import {
+  execute as openfangExecute,
+  testEnvironment as openfangTestEnvironment,
+} from "@paperclipai/adapter-openfang-http/server";
+import {
+  agentConfigurationDoc as openfangAgentConfigurationDoc,
+  models as openfangModels,
+} from "@paperclipai/adapter-openfang-http";
 import { processAdapter } from "./process/index.js";
 import { httpAdapter } from "./http/index.js";
 
@@ -127,6 +135,15 @@ const piLocalAdapter: ServerAdapterModule = {
   agentConfigurationDoc: piAgentConfigurationDoc,
 };
 
+const openfangHttpAdapter: ServerAdapterModule = {
+  type: "openfang_http",
+  execute: openfangExecute,
+  testEnvironment: openfangTestEnvironment,
+  models: openfangModels,
+  supportsLocalAgentJwt: false,
+  agentConfigurationDoc: openfangAgentConfigurationDoc,
+};
+
 const adaptersByType = new Map<string, ServerAdapterModule>(
   [
     claudeLocalAdapter,
@@ -136,6 +153,7 @@ const adaptersByType = new Map<string, ServerAdapterModule>(
     cursorLocalAdapter,
     geminiLocalAdapter,
     openclawGatewayAdapter,
+    openfangHttpAdapter,
     processAdapter,
     httpAdapter,
   ].map((a) => [a.type, a]),
