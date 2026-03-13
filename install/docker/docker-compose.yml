@@ -1,0 +1,158 @@
+# =============================================================================
+# agent-phi — docker-compose stack
+# =============================================================================
+# Usage:
+#   cp .env.example .env        # configure once
+#   docker compose up -d        # start (uses pre-built image if pulled)
+#   docker compose up -d --build  # build from source and start
+#   docker compose down         # stop
+#   docker compose logs -f paperclip  # stream logs
+#
+# All persistent data lives under ${AGENT_STATE_BASE}/<service> on the host.
+# All services share the ${DOCKER_NETWORK_NAME} bridge network so they can
+# reach each other by container name (e.g. http://openfang:4200).
+# =============================================================================
+
+networks:
+  # Shared network — all current and future services join this network.
+  # Other compose projects can attach to it by declaring it as external:
+  #   networks:
+  #     agent-phi:
+  #       external: true
+  #       name: ${DOCKER_NETWORK_NAME}
+  agent:
+    name: ${DOCKER_NETWORK_NAME:-agent-phi}
+    driver: bridge
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Paperclip — AI agent orchestration control plane
+  # Docs: https://github.com/paperclipai/paperclip
+  # ---------------------------------------------------------------------------
+  paperclip:
+    # Build from source (monorepo root is two levels up from this file).
+    # To pull a published image instead, replace `build:` with:
+    #   image: paperclipai/paperclip:${PAPERCLIP_IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    image: paperclipai/paperclip:${PAPERCLIP_IMAGE_TAG:-local}
+    container_name: paperclip
+    restart: unless-stopped
+    networks:
+      - agent
+    ports:
+      - "${PAPERCLIP_PORT:-3100}:3100"
+
+    # Persistent state — maps to /paperclip inside the container.
+    # Structure on host:
+    #   ${AGENT_STATE_BASE}/paperclip/
+    #     instances/default/
+    #       config.json         ← runtime config (auto-created on first boot)
+    #       db/                 ← embedded Postgres data
+    #       secrets/master.key  ← AES-256 encryption key (auto-generated)
+    #       data/storage/       ← file attachments
+    #       data/backups/       ← automatic DB backups
+    #       workspaces/         ← agent checkout directories
+    volumes:
+      - type: bind
+        source: ${AGENT_STATE_BASE:-${HOME}/agent-phi/state}/paperclip
+        target: /paperclip
+        # Creates the directory on the host if it does not exist.
+        bind:
+          create_host_path: true
+
+    environment:
+      NODE_ENV: production
+      # Bind to all interfaces inside the container; the host port mapping
+      # above controls external exposure.
+      HOST: "0.0.0.0"
+      PORT: "3100"
+      SERVE_UI: "true"
+
+      # Tell Paperclip where its home dir is inside the container.
+      PAPERCLIP_HOME: /paperclip
+      PAPERCLIP_INSTANCE_ID: ${PAPERCLIP_INSTANCE_ID:-default}
+      PAPERCLIP_CONFIG: /paperclip/instances/${PAPERCLIP_INSTANCE_ID:-default}/config.json
+
+      # Deployment
+      PAPERCLIP_DEPLOYMENT_MODE: ${PAPERCLIP_DEPLOYMENT_MODE:-authenticated}
+      PAPERCLIP_DEPLOYMENT_EXPOSURE: ${PAPERCLIP_DEPLOYMENT_EXPOSURE:-private}
+
+      # Auth — required when DEPLOYMENT_MODE=authenticated
+      PAPERCLIP_PUBLIC_URL: ${PAPERCLIP_PUBLIC_URL:-}
+      PAPERCLIP_AUTH_DISABLE_SIGN_UP: ${PAPERCLIP_AUTH_DISABLE_SIGN_UP:-false}
+
+      # Secrets
+      PAPERCLIP_SECRETS_STRICT_MODE: ${PAPERCLIP_SECRETS_STRICT_MODE:-false}
+
+      # Optional: override with an external Postgres URL (disables embedded Postgres).
+      # DATABASE_URL: ${DATABASE_URL:-}
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3100/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  # ---------------------------------------------------------------------------
+  # OpenFang — autonomous agent OS
+  # Docs: https://github.com/RightNow-AI/openfang
+  #
+  # Uncomment this service when you have the OpenFang image available.
+  # Paperclip can reach it at http://openfang:4200 from within the network.
+  # Set adapterConfig.baseUrl=http://openfang:4200 when creating agents.
+  # ---------------------------------------------------------------------------
+  # openfang:
+  #   image: rightnowai/openfang:${OPENFANG_IMAGE_TAG:-latest}
+  #   container_name: openfang
+  #   restart: unless-stopped
+  #   networks:
+  #     - agent
+  #   ports:
+  #     - "${OPENFANG_PORT:-4200}:4200"
+  #   volumes:
+  #     - type: bind
+  #       source: ${AGENT_STATE_BASE:-${HOME}/agent-phi/state}/openfang
+  #       target: /openfang
+  #       bind:
+  #         create_host_path: true
+  #   environment:
+  #     OPENFANG_HOME: /openfang
+  #     OPENFANG_HOST: "0.0.0.0"
+  #     OPENFANG_PORT: "4200"
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:4200/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 20s
+
+  # ---------------------------------------------------------------------------
+  # QMD / Memory — shared memory and knowledge layer
+  #
+  # Uncomment when qmd is available. All services on the agent network can
+  # reach it at http://qmd:<port>.
+  # ---------------------------------------------------------------------------
+  # qmd:
+  #   image: your-org/qmd:${QMD_IMAGE_TAG:-latest}
+  #   container_name: qmd
+  #   restart: unless-stopped
+  #   networks:
+  #     - agent
+  #   ports:
+  #     - "${QMD_PORT:-5000}:5000"
+  #   volumes:
+  #     - type: bind
+  #       source: ${AGENT_STATE_BASE:-${HOME}/agent-phi/state}/qmd
+  #       target: /qmd
+  #       bind:
+  #         create_host_path: true
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 10s

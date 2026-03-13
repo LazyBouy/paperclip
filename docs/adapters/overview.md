@@ -23,6 +23,7 @@ When a heartbeat fires, Paperclip:
 | [Gemini Local](/adapters/gemini-local) | `gemini_local` | Runs Gemini CLI locally |
 | OpenCode Local | `opencode_local` | Runs OpenCode CLI locally (multi-provider `provider/model`) |
 | OpenClaw | `openclaw` | Sends wake payloads to an OpenClaw webhook |
+| [OpenFang HTTP](/adapters/openfang-http) | `openfang_http` | Streams responses from an OpenFang service via HTTP |
 | [Process](/adapters/process) | `process` | Executes arbitrary shell commands |
 | [HTTP](/adapters/http) | `http` | Sends webhooks to external agents |
 
@@ -57,5 +58,6 @@ Three registries consume these modules:
 
 - **Need a coding agent?** Use `claude_local`, `codex_local`, `gemini_local`, or `opencode_local`
 - **Need to run a script or command?** Use `process`
-- **Need to call an external service?** Use `http`
+- **Need to call an external service?** Use `http` or `openfang_http`
+- **Need an autonomous agent service with specialised Hands?** Use `openfang_http`
 - **Need something custom?** [Create your own adapter](/adapters/creating-an-adapter)
