@@ -14,15 +14,16 @@
 # =============================================================================
 
 networks:
-  # Shared network — all current and future services join this network.
-  # Other compose projects can attach to it by declaring it as external:
+  # Shared external network — all current and future services join this network.
+  # Create it once before first boot:  docker network create agent-phi
+  # Other compose projects attach to it by declaring it as external:
   #   networks:
-  #     agent-phi:
+  #     agent-net:
   #       external: true
-  #       name: ${DOCKER_NETWORK_NAME}
-  agent:
-    name: ${DOCKER_NETWORK_NAME:-agent-phi}
-    driver: bridge
+  #       name: ${AGENT_NETWORK:-agent-phi}
+  agent-net:
+    external: true
+    name: ${AGENT_NETWORK:-agent-phi}
 
 services:
 
@@ -41,7 +42,7 @@ services:
     container_name: paperclip
     restart: unless-stopped
     networks:
-      - agent
+      - agent-net
     ports:
       - "${PAPERCLIP_PORT:-3100}:3100"
 
@@ -110,21 +111,21 @@ services:
   #   container_name: openfang
   #   restart: unless-stopped
   #   networks:
-  #     - agent
+  #     - agent-net
   #   ports:
   #     - "${OPENFANG_PORT:-4200}:4200"
   #   volumes:
   #     - type: bind
   #       source: ${AGENT_STATE_BASE:-${HOME}/agent-phi/state}/openfang
-  #       target: /openfang
+  #       target: /data
   #       bind:
   #         create_host_path: true
   #   environment:
-  #     OPENFANG_HOME: /openfang
+  #     OPENFANG_HOME: /data
   #     OPENFANG_HOST: "0.0.0.0"
   #     OPENFANG_PORT: "4200"
   #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:4200/health"]
+  #     test: ["CMD", "curl", "-f", "http://localhost:4200/api/health"]
   #     interval: 30s
   #     timeout: 10s
   #     retries: 5
@@ -134,24 +135,27 @@ services:
   # QMD / Memory — shared memory and knowledge layer
   #
   # Uncomment when qmd is available. All services on the agent network can
-  # reach it at http://qmd:<port>.
+  # reach it at http://qmd:8181.
   # ---------------------------------------------------------------------------
   # qmd:
   #   image: your-org/qmd:${QMD_IMAGE_TAG:-latest}
   #   container_name: qmd
   #   restart: unless-stopped
   #   networks:
-  #     - agent
+  #     - agent-net
   #   ports:
-  #     - "${QMD_PORT:-5000}:5000"
+  #     - "${QMD_PORT:-8181}:8181"
   #   volumes:
   #     - type: bind
   #       source: ${AGENT_STATE_BASE:-${HOME}/agent-phi/state}/qmd
-  #       target: /qmd
+  #       target: /data
   #       bind:
   #         create_host_path: true
+  #   environment:
+  #     XDG_CACHE_HOME: /data/cache
+  #     XDG_CONFIG_HOME: /data/config
   #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+  #     test: ["CMD", "curl", "-f", "http://localhost:8181/health"]
   #     interval: 30s
   #     timeout: 10s
   #     retries: 3
