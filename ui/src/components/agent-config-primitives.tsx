@@ -66,6 +66,7 @@ export const adapterLabels: Record<string, string> = {
   cursor: "Cursor (local)",
   process: "Process",
   http: "HTTP",
+  openfang_http: "OpenFang",
 };
 
 export const roleLabels = AGENT_ROLE_LABELS as Record<string, string>;
