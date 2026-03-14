@@ -38,7 +38,7 @@ services:
     build:
       context: ../..
       dockerfile: install/docker/Dockerfile
-    image: paperclipai/paperclip:${PAPERCLIP_IMAGE_TAG:-local}
+    image: paperclip:${PAPERCLIP_IMAGE_TAG:-local}
     container_name: paperclip
     restart: unless-stopped
     networks:
