@@ -8,8 +8,8 @@
 #   docker compose down         # stop
 #   docker compose logs -f paperclip  # stream logs
 #
-# All persistent data lives under ${AGENT_STATE_BASE}/<service> on the host.
-# All services share the ${DOCKER_NETWORK_NAME} bridge network so they can
+# All persistent data lives under ${AGENT_BASE}/state/<service> on the host.
+# All services share the ${AGENT_NETWORK} bridge network so they can
 # reach each other by container name (e.g. http://openfang:4200).
 # =============================================================================
 
@@ -37,7 +37,7 @@ services:
     #   image: paperclipai/paperclip:${PAPERCLIP_IMAGE_TAG:-latest}
     build:
       context: ../..
-      dockerfile: Dockerfile
+      dockerfile: install/docker/Dockerfile
     image: paperclipai/paperclip:${PAPERCLIP_IMAGE_TAG:-local}
     container_name: paperclip
     restart: unless-stopped
@@ -48,7 +48,7 @@ services:
 
     # Persistent state — maps to /paperclip inside the container.
     # Structure on host:
-    #   ${AGENT_STATE_BASE}/paperclip/
+    #   ${AGENT_BASE}/state/paperclip/
     #     instances/default/
     #       config.json         ← runtime config (auto-created on first boot)
     #       db/                 ← embedded Postgres data
@@ -58,7 +58,7 @@ services:
     #       workspaces/         ← agent checkout directories
     volumes:
       - type: bind
-        source: ${AGENT_STATE_BASE:-${HOME}/agent-phi/state}/paperclip
+        source: ${AGENT_BASE:-~/agent-phi}/state/paperclip
         target: /paperclip
         # Creates the directory on the host if it does not exist.
         bind:
@@ -116,7 +116,7 @@ services:
   #     - "${OPENFANG_PORT:-4200}:4200"
   #   volumes:
   #     - type: bind
-  #       source: ${AGENT_STATE_BASE:-${HOME}/agent-phi/state}/openfang
+  #       source: ${AGENT_BASE:-~/agent-phi}/state/openfang
   #       target: /data
   #       bind:
   #         create_host_path: true
@@ -147,7 +147,7 @@ services:
   #     - "${QMD_PORT:-8181}:8181"
   #   volumes:
   #     - type: bind
-  #       source: ${AGENT_STATE_BASE:-${HOME}/agent-phi/state}/qmd
+  #       source: ${AGENT_BASE:-~/agent-phi}/state/qmd
   #       target: /data
   #       bind:
   #         create_host_path: true
